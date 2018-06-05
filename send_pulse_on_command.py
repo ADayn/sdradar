@@ -34,7 +34,7 @@ def gen_pulse(sample_rate):
     return pulse
 
 def main():
-    sample_rate = 50e6
+    sample_rate = 40e6
     center_freq = 2.41e9
     rrange = radar_range(10,2,center_freq)
     sample_round_trip = 2*rrange*sample_rate*1./C
@@ -43,9 +43,9 @@ def main():
     length = int(np.round(sample_rate/sweep_rate))
 
     ##signal
-    #pulse = gen_chirp(length, sweep_rate/sample_rate)
+    pulse = gen_chirp(length, sweep_rate/sample_rate)
     #pulse = gen_pulse(sample_rate)
-    pulse = gen_tone(length)
+   
     packet = pulse.astype(np.complex64)
     
     ##SDR
