@@ -20,6 +20,10 @@ def gen_chirp(count, sweep_rate):
     t = np.linspace(0,(count-1),count)
     return np.sin(2*np.pi*sweep_rate/4*t**2)
 
+def gen_tone(count):
+    t = np.ones(count)
+    return np.sin(t)
+
 def gen_pulse(sample_rate):
     n = 100000
     a = np.zeros(n)
@@ -40,8 +44,8 @@ def main():
 
     ##signal
     #pulse = gen_chirp(length, sweep_rate/sample_rate)
-    pulse = gen_pulse(sample_rate)
-
+    #pulse = gen_pulse(sample_rate)
+    pulse = gen_tone(length)
     packet = pulse.astype(np.complex64)
     
     ##SDR
@@ -55,15 +59,15 @@ def main():
     sdr.activateStream(tx)
 
     while True:
-        words = raw_input("hit enter to send")
-        if words == 'q':
-            break
+        #words = raw_input("hit enter to send")
+        #if words == 'q':
+        #    break
         txTime0 = sdr.getHardwareTime() + long(.1e9)
         txflags = sp.SOAPY_SDR_HAS_TIME|sp.SOAPY_SDR_END_BURST
         print txflags
         st = sdr.writeStream(tx, [packet], len(pulse), txflags, txTime0)
 
-        print st.flags, " is flags"
+        #print st.flags, " is flags"
     
     
     sdr.deactivateStream(tx)
