@@ -9,10 +9,14 @@ from optparse import OptionParser
 import time
 import os
 import math
+import matplotlib.pyplot as plt
+
+import utils as u
 
 def siggen_app(
     args,
     rate,
+    waves,
     ampl=0.7,
     freq=None,
     txBw=None,
@@ -21,7 +25,7 @@ def siggen_app(
     txGain=None,
     txAnt=None,
     clockRate=None,
-    waveFreq=None
+    waveFreq=None,
 ):
     if waveFreq is None: waveFreq = rate/10
 
@@ -48,6 +52,8 @@ def siggen_app(
     print("Tune the frontend")
     if freq is not None: sdr.setFrequency(SOAPY_SDR_TX, txChan, freq)
 
+    print("Waveform:"+ waves)
+
     #tx loop
     #create tx stream
     print("Create Tx stream")
@@ -55,19 +61,38 @@ def siggen_app(
     print("Activate Tx Stream")
     sdr.activateStream(txStream)
     phaseAcc = 0
-    phaseInc = 2*math.pi*waveFreq/rate
+    #phaseInc = 2*math.pi*waveFreq/rate
+    phaseInc = math.pi/4*waveFreq/rate
     streamMTU = sdr.getStreamMTU(txStream)
     sampsCh0 = np.array([ampl]*streamMTU, np.complex64)
-    
+    print streamMTU
     timeLastPrint = time.time()
     totalSamps = 0
+    #phaseAccNext = streamMTU*phaseInc
+    #phaseAcc = phaseAccNext
+    #testSpace = np.pi/4*np.linspace(0,streamMTU-1)
     while True:
         phaseAccNext = phaseAcc + streamMTU*phaseInc
-        sampsCh0 = ampl*np.exp(1j*np.linspace(phaseAcc, phaseAccNext, streamMTU)).astype(np.complex64)
-        phaseAcc = phaseAccNext
-        while phaseAcc > math.pi*2: phaseAcc -= math.pi*2
+	if waves == "sine":
+        	sampsCh0 = ampl*np.exp(1j*np.linspace(phaseAcc, phaseAccNext, streamMTU)).astype(np.complex64)
+		#sampsCh0 = ampl*np.exp(1j*testSpace).astype(np.complex64)
+	elif waves == "pulse":
+		n = len(sampsCh0)
+ 		a= np.zeros(n)
+   		l = .25
+   		a[:int(l*n)] = 1
+   		a[-int(l*n):] = 1
+		sampsCh0 = np.fft.ifft(a)
+	elif waves == "zeros":
+		sampsCh0 = np.zeros(len(sampsCh0))
 
-        sr = sdr.writeStream(txStream, [sampsCh0], sampsCh0.size, timeoutUs=1000000)
+	phaseAcc = phaseAccNext
+        while phaseAcc > math.pi*2: phaseAcc -= math.pi*2
+	#while phaseAcc > math.pi*2: phaseAcc -= math.pi
+	#phaseAcc %= math.pi*2
+#	plt.plot(sampsCh0)
+#	plt.show()
+        sr = sdr.writeStream(txStream, [sampsCh0], len(sampsCh0))
         if sr.ret != sampsCh0.size:
             raise Exception("Expected writeStream() to consume all samples! %d"%sr.ret)
         totalSamps += sr.ret
@@ -85,20 +110,23 @@ def siggen_app(
 
 def main():
     parser = OptionParser()
-    parser.add_option("--args", type="string", dest="args", help="device factor arguments", default="")
-    parser.add_option("--rate", type="float", dest="rate", help="Tx and Rx sample rate", default=1e6)
-    parser.add_option("--ampl", type="float", dest="ampl", help="Tx digital amplitude rate", default=0.7)
+
+    parser.add_option("--args", dest="args", help="device factor arguments", default={'driver':'bladerf','serial':u.BLADE_1})
+    parser.add_option("--rate", type="float", dest="rate", help="Tx and Rx sample rate", default=2e6)
+    parser.add_option("--ampl", type="float", dest="ampl", help="Tx digital amplitude rate", default=1)
     parser.add_option("--txAnt", type="string", dest="txAnt", help="Optional Tx antenna", default=None)
     parser.add_option("--txGain", type="float", dest="txGain", help="Optional Tx gain (dB)", default=None)
     parser.add_option("--txChan", type="int", dest="txChan", help="Transmitter channel (def=0)", default=0)
-    parser.add_option("--freq", type="float", dest="freq", help="Optional Tx and Rx freq (Hz)", default=None)
+    parser.add_option("--freq", type="float", dest="freq", help="Optional Tx and Rx freq (Hz)", default=2.41e9)
     parser.add_option("--txBw", type="float", dest="txBw", help="Optional Tx filter bw (Hz)", default=None)
-    parser.add_option("--waveFreq", type="float", dest="waveFreq", help="Baseband waveform freq (Hz)", default=None)
+    parser.add_option("--waveFreq", type="float", dest="waveFreq", help="Baseband waveform freq (Hz)", default=1e6)
     parser.add_option("--clockRate", type="float", dest="clockRate", help="Optional clock rate (Hz)", default=None)
+    parser.add_option("--WaveType", type="string", dest="waves", help="Wavefrom transmitted",default="sine")
     (options, args) = parser.parse_args()
     siggen_app(
         args=options.args,
         rate=options.rate,
+	waves=options.waves,
         ampl=options.ampl,
         freq=options.freq,
         txBw=options.txBw,
@@ -110,4 +138,3 @@ def main():
     )
 
 if __name__ == '__main__': main()
-
