@@ -1,6 +1,26 @@
 Work Log
 
 
+--June 7, 2018--
+Achievements:
+-Creating proper I.Q. data for desired waveform
+-Realtime graphing of radio RX
+-Determined max computational ability using Python Soapy + NumPy
+
+Lessons:
+-Bottleneck for Python is computation of buffer at runtime
+-Nyquist is at sample rate for complex samples is f_s instead of f_s/2
+
+Todo:
+-Try precomputing buffer
+-Try computing at runtime in C
+-Figure out issues with sdradar02
+-Find fastest C library for complex manipulation
+-Send / receive chirp
+-Determine pulse waveforms
+
+
+
 --June 6, 2018--
 Achievements:
 -Visualize IQ data with gnuRadio
